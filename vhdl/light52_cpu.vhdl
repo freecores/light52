@@ -1083,6 +1083,7 @@ with ps select direct_addressing <=
     '1'                         when jrb_bit_0 | jrb_bit_1 | jrb_bit_2,
     '1'                         when bit_op_0 | bit_op_1 | bit_op_2,
     -- FIXME these below have been verified and corrected
+    '1'                         when djnz_dir_0,
     '1'                         when djnz_dir_1,
     '1'                         when djnz_dir_2,
     '1'                         when push_0,
