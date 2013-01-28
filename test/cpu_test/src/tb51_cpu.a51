@@ -97,7 +97,6 @@ start:
         ; Clear failure flag
         mov     fail,#000h
 
-
         ;-- Test series A ------------------------------------------------------
         ; Test the basic opcodes needed in later tests:
         ; a.- Serial port initialization is OK
@@ -1170,7 +1169,8 @@ tk_ma0: dec     a
         cjne    a,#001,error_loc    ; Verify number of iterations is ok
         endm
         
-        tk_ma   dir0,tk_a0          ; <DJNZ dir,rel>
+        tk_ma   dir0,tk_a0          ; <DJNZ dir,rel> with IRAM operand
+        tk_ma   B,tk_a0             ; <DJNZ dir,rel> with SFR operand
 
         eot     'a',tk_a0
 
