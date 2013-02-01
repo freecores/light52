@@ -1,7 +1,10 @@
-; irq_test.a51 -- First interrupt srvice test.
+; irq_test.a51 -- First interrupt service test.
 ;
-; This program is meant to run on a light53 MCU with the 16-bit timer. It can be
-; run on simulation or in actual hardware.
+; This progam is only meant to work in the simulation test bench, because it
+; requires the external interrupt inputs to be wired to the P1 output port.
+; They are in the simulation test bench entity but not in the synthesizable
+; demo top entity.
+;
 ; Its purpose is to demonstrate the working of the interrupt service logic. No
 ; actual tests are performed (other than the co-simulation tests), only checks.
 ;
@@ -59,53 +62,61 @@ start:
         
         ;---- External interrupt test --------------------------------------
         
+        ; We'll be asserting the external interrupt request line 0, making
+        ; sure the interrupt enable flags work properly. No other interrupt
+        ; will be asserted simultaneously or while in the interrupt service
+        ; routine.
+        
         ; Trigger external IRQ with IRQs disabled, it should be ignored.
-        mov     P1,#01h
+        mov     P1,#01h             ; Assert external interrupt line 0...
+        nop                         ; ...give the CPU some time to acknowledge
+        nop                         ; the interrupt...
         nop
-        nop
-        nop
-        mov     a,ext_irq_ctr
+        mov     a,ext_irq_ctr       ; ...and then make sure it hasn't.
         cjne    a,#00,fail_unexpected
         setb    EXTINT0.0           ; Clear external IRQ flag
 
         ; Trigger timer IRQ with external IRQ enabled but global IE disabled
-        mov     IE,#01h
-        mov     P1,#01h
+        mov     IE,#01h             ; Enable external interrupt...
+        mov     P1,#01h             ; ...and assert interrupt line.
+        nop                         ; Wait a little...
         nop
         nop
-        nop
-        mov     a,ext_irq_ctr
-        cjne    a,#00,fail_unexpected
-        setb    EXTINT0.0          ; Clear timer IRQ flag
+        mov     a,ext_irq_ctr       ; ...and make sure the interrupt was NOT
+        cjne    a,#00,fail_unexpected   ; serviced.
+        setb    EXTINT0.0           ; Clear timer IRQ flag
 
         ; Trigger external IRQ with external and global IRQ enabled
-        mov     P1,#00h
-        mov     IE,#81h
-        mov     ext_irq_ctr,#00
-        mov     P1,#01h
+        mov     P1,#00h             ; Clear the external interrupt line...
+        mov     IE,#81h             ; ...before enabling interrupts globally.
+        mov     ext_irq_ctr,#00     ; Reset the interrupt counter...
+        mov     P1,#01h             ; ...and assert the external interrupt.
+        nop                         ; Give it some time to be acknowledged...
         nop
         nop
-        nop
-        mov     a,ext_irq_ctr
+        mov     a,ext_irq_ctr       ; ...and make sure it has been serviced.
         cjne    a,#01,fail_expected
         setb    EXTINT0.0          ; Clear timer IRQ flag
-
 
         ; End of irq test, print message and continue
         mov     DPTR,#text2
         call    puts
 
         ;---- Timer test ---------------------------------------------------
-        ; Assume the prescaler is set for a 20ms count period
+        ; Assume the prescaler is set for a 20us count period.
         
-        mov     IE,#000h
+        ; All we will do here is make sure the counter changes at the right
+        ; time, i.e. 20us after being started. We will NOT test the full
+        ; functionality of the timer (not in this version of the test).
         
-        mov     TSTAT,#00
-        mov     TH,#00
-        mov     TL,#00
-        mov     TCH,#0c3h           ; Compare register = 50000 = 1 second
-        mov     TCL,#050h
-        mov     TSTAT,#030h         ; Start counting
+        mov     IE,#000h            ; Disable all interrupts...
+                                    ; ...and put timer in
+        mov     TSTAT,#00           ; Stop timer...
+        mov     TH,#00              ; ...set counter = 0...
+        mov     TL,#00              ;
+        mov     TCH,#0c3h           ; ...and set Compare register = 50000.
+        mov     TCL,#050h           ; (50000 counts = 1 second)
+        mov     TSTAT,#030h         ; Start counting.
 
         ; Ok, now wait for a little less than 20us and make sure TH:TL has not
         ; changed yet.
@@ -158,6 +169,8 @@ fail_unexpected:
         mov     IE,#00h
         ajmp    $
 
+        ; End of the test code. Now let's define a few utility routines.
+
 ;-- puts: output to UART a zero-terminated string at DPTR ----------------------
 puts:
         mov     r0,#00h
@@ -173,7 +186,7 @@ puts_done:
         ret
 
 ;-- irq_timer: interrupt routine for timer -------------------------------------
-; Note we don't bother to preserve any registers
+; Note we don't bother to preserve any registers.
 irq_ext:
         mov     P1,#00h             ; Remove the external interrupt request
         mov     EXTINT0,#0ffh       ; Clear all external IRQ flags
@@ -186,8 +199,7 @@ irq_timer:
 irq_wrong:
         ajmp    irq_wrong
 
-
-
+        ; End of the utility routines. Define constant data and we're done.
 
 text0:  db      '<External irq>',13,10,00h,00h
 text1:  db      'Unexpected IRQ',13,10,00h,00h
