@@ -531,6 +531,38 @@ tc_n3:
 
         eot     'n',tc_n0
 
+        ; (better read the following code in execution order)
+        mov     ACC,#08h              ; We'll be testing bits ACC.3 and ACC.2
+        sjmp    tc_o1               ; jump forward so we can test jump backwards
+tc_o2:  mov     c,ACC.3               ; make sure the target bit is clear
+        jc      tc_o0
+        jbc     ACC.2,tc_o0           ; JBC jumps not when target bit clear
+        sjmp    tc_o3
+tc_o1:  jbc     ACC.3,tc_o2           ; JBC jumps when target bit set
+        sjmp    tc_o0
+tc_o3:
+
+        eot     'o',tc_o0
+
+        mov     02eh,#00h           ; We'll be testing bits ACC.3 and ACC.2
+        setb    ACC.3
+        mov     c,ACC.3
+        jnc     tc_p0
+        setb    ACC.2
+        mov     c,ACC.2
+        jnc     tc_p0
+
+        eot     'p',tc_p0
+
+        mov     ACC,#80h           ; We'll be testing bit ACC.7
+        jb      ACC.7,tc_q1
+        sjmp    tc_q0
+tc_q1:  clr     ACC.7
+        jb      ACC.7,tc_q0
+        cpl     ACC.7
+        jnb     ACC.7,tc_q0
+
+        eot     'q',tc_q0
 
 
         put_crlf                    ; end of test series
